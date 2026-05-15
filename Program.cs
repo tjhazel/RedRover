@@ -5,40 +5,32 @@ Console.WriteLine("RedRover.Puzzle Version 1.0");
 Console.ResetColor();
 
 PrintDefaultResults();
-
-Console.WriteLine("Done!  Hit any key to close");
+Console.WriteLine("");
+Console.WriteLine("Done!  Hit Enter to close");
 
 var newString = Console.ReadLine();
 
 void PrintDefaultResults()
 {
+   //note:  this is a hardcoded string for testing purposes, but the code should work for any string in this format
    const string sourceString = "(id, name, email, type(id, name, customFields(c1, c2, c3)), externalId)";
-   Console.WriteLine("Source String:");
-   Console.WriteLine($"{"".PadLeft(4)}{sourceString}");
+   Console.WriteLine($"Source String: {sourceString}");
    Console.WriteLine("");
 
-   Console.WriteLine("Begin Printing Default Order:");
+   Console.ForegroundColor = ConsoleColor.Green;
+   Console.WriteLine("############   Default Sort Order   ############");
+   Console.ResetColor();
 
    var defaultSort = Parse(sourceString);
    PrintResults(defaultSort);
-
+    
    Console.WriteLine("");
    Console.ForegroundColor = ConsoleColor.Green;
-   Console.WriteLine("###################");
-   Console.WriteLine($"{"".PadLeft(4)}Completed Default Sort");
+   Console.WriteLine("############   Alphabetical Sort   ############");
    Console.ResetColor();
 
-   Console.WriteLine("");
-
-   Console.WriteLine("Begin Printing Alphabetical Order:");
    var alphaSort = Parse(sourceString);
    PrintResults(alphaSort, sort: true);
-
-   Console.WriteLine("");
-   Console.ForegroundColor = ConsoleColor.Green;
-   Console.WriteLine("###################");
-   Console.WriteLine($"{"".PadLeft(4)}Completed Alphabetical Sort");
-   Console.ResetColor();
 }
 
 void PrintResults(Node node, int level = 0, bool sort = false)
@@ -77,7 +69,7 @@ Node Parse(string source)
 
          case ')':
             AddNode(current, fieldName);
-            if (nodeList.Count > 1)
+            if (nodeList.Count > 1)  //done adding, step back up to the parent node
                nodeList.RemoveAt(nodeList.Count - 1);
             break;
 
