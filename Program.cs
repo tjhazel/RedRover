@@ -4,16 +4,32 @@ Console.ForegroundColor = ConsoleColor.Red;
 Console.WriteLine("RedRover.Puzzle Version 1.0");
 Console.ResetColor();
 
-PrintDefaultResults();
+PrintStartInput();
 Console.WriteLine("");
-Console.WriteLine("Done!  Hit Enter to close");
 
-var newString = Console.ReadLine();
+while (true)
+{
+   Console.WriteLine("Enter a string to parse (or 'q' to quit): ");
+   string input = Console.ReadLine() ?? string.Empty;
 
-void PrintDefaultResults()
+   if (input.Equals("q", StringComparison.OrdinalIgnoreCase))
+      break;
+
+   // do something with input
+   PrintInput(input);
+   Console.WriteLine("");
+}
+
+
+void PrintStartInput()
 {
    //note:  this is a hardcoded string for testing purposes, but the code should work for any string in this format
    const string sourceString = "(id, name, email, type(id, name, customFields(c1, c2, c3)), externalId)";
+   PrintInput(sourceString);   
+}
+
+void PrintInput(string sourceString)
+{
    Console.WriteLine($"Source String: {sourceString}");
    Console.WriteLine("");
 
@@ -21,19 +37,38 @@ void PrintDefaultResults()
    Console.WriteLine("############   Default Sort Order   ############");
    Console.ResetColor();
 
-   var defaultSort = Parse(sourceString);
-   PrintResults(defaultSort);
-    
-   Console.WriteLine("");
-   Console.ForegroundColor = ConsoleColor.Green;
-   Console.WriteLine("############   Alphabetical Sort   ############");
-   Console.ResetColor();
+   try 
+   {
+      var defaultSort = Parse(sourceString);
+      SortAndPrintResults(defaultSort);
 
-   var alphaSort = Parse(sourceString);
-   PrintResults(alphaSort, sort: true);
+      Console.WriteLine("");
+      Console.ForegroundColor = ConsoleColor.Green;
+      Console.WriteLine("############   Alphabetical Sort   ############");
+      Console.ResetColor();
+
+      var alphaSort = Parse(sourceString);
+      SortAndPrintResults(alphaSort, sort: true);
+   }   
+   catch (ArgumentException ex)
+   {
+      Console.ForegroundColor = ConsoleColor.Red;
+      Console.WriteLine($"Invalid input \"{sourceString}\". Make sure input is in a valid format: {ex.Message}");
+      Console.ResetColor();
+      return;
+   }
+   catch (Exception ex)
+   {
+      Console.ForegroundColor = ConsoleColor.Red;
+      Console.WriteLine($"Error parsing input: {ex.Message}");
+      Console.ResetColor();
+      return;
+   }
+
 }
 
-void PrintResults(Node node, int level = 0, bool sort = false)
+//recursively print the sorted results
+void SortAndPrintResults(Node node, int level = 0, bool sort = false)
 {
    if (level > 0)
       Console.WriteLine($"{new string(' ', level * 2)}- {node.Field}");
@@ -44,13 +79,18 @@ void PrintResults(Node node, int level = 0, bool sort = false)
       node.Children.Sort((a, b) => string.Compare(a.Field, b.Field));
 
    foreach (var child in node.Children)
-      PrintResults(child, level, sort);
+      SortAndPrintResults(child, level, sort);
 }
 
+//single pass through the string to build a stack of nodes
 Node Parse(string source)
 {
+   ValidateInput(source);
+
    //adding a fake root node to make this work cleanly
    var root = new Node { Field = "root" };
+
+   //this is where we store our breadcrumbs so we can step back up to the parent node when we hit a closing paren
    var nodeList = new List<Node> { root };
 
    var fieldName = new StringBuilder();
@@ -77,10 +117,10 @@ Node Parse(string source)
             AddNode(current, fieldName);
             break;
 
-         case ' ':
+         case ' ': //this will remove all whitespace - would it be better to throw and argumenet exception?
             break;
 
-         default:
+         default: //do we need to filter any other characters here - leading numbers, special characters, etc? 
             fieldName.Append(c);
             break;
       }
@@ -91,6 +131,7 @@ Node Parse(string source)
 
 Node AddNode(Node parent, StringBuilder fieldName)
 {
+   
    var node = new Node { Field = fieldName.ToString().Trim(), Order = parent.Children.Count };
    fieldName.Clear();
    if (!string.IsNullOrWhiteSpace(node.Field))
@@ -98,9 +139,22 @@ Node AddNode(Node parent, StringBuilder fieldName)
    return node;
 }
 
+void ValidateInput(string inputString)
+{
+   ArgumentException.ThrowIfNullOrWhiteSpace(inputString);
+   if (!inputString.StartsWith('('))
+      throw new ArgumentException("Input string must start with '('", nameof(inputString));
+   if (!inputString.EndsWith(')'))
+      throw new ArgumentException("Input string must end with ')'", nameof(inputString));   
+   if (inputString.Count(c => c == '(') != inputString.Count(c => c == ')'))
+      throw new ArgumentException("Input string has mismatched parentheses", nameof(inputString));
+   //TODO: add more validation
+}
+
 class Node
 {
    public required string Field { get; set; }
+   //this prop gives a way to reset the sort
    public int Order { get; set; }
    public List<Node> Children { get; set; } = [];
 }
